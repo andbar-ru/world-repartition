@@ -4,131 +4,131 @@ const countries = [
   {
     name: 'A',
     color: '#000000', // black
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'B',
     color: '#a0522d', // sienna
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'C',
     color: '#808000', // olive
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'D',
     color: '#483d8b', // darkslateblue
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'E',
     color: '#008000', // green
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'F',
     color: '#bc8f8f', // rosybrown
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'G',
     color: '#008080', // teal
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'H',
     color: '#000080', // navy
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'I',
     color: '#9acd32', // yellowgreen
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'J',
     color: '#8b008b', // darkmagenta
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'K',
     color: '#ff4500', // orangered
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'L',
     color: '#ffa500', // orange
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'M',
     color: '#ffff00', // yellow
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'N',
     color: '#7cfc00', // lawngreen
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'O',
     color: '#8a2be2', // blueviolet
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'P',
     color: '#00ff7f', // springgreen
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'Q',
     color: '#dc143c', // crimson
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'R',
     color: '#0000ff', // blue
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'S',
     color: '#ff00ff', // fuchsia
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'T',
     color: '#f0e68c', // khaki
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'U',
     color: '#6495ed', // cornflower
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'V',
     color: '#87ceeb', // skyblue
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'W',
     color: '#ff1493', // deeppink
-    textColor: 'white',
+    altColor: 'white',
   },
   {
     name: 'X',
     color: '#ee82ee', // violet
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'Y',
     color: '#7fffd4', // aquamarine
-    textColor: 'black',
+    altColor: 'black',
   },
   {
     name: 'Z',
     color: '#fffff0', // ivory
-    textColor: 'black',
+    altColor: 'black',
   },
 ]

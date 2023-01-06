@@ -42,6 +42,35 @@ class World {
   }
 
   /**
+   * Renders country capitals as rectangle 3x3.
+   *
+   * @param ctx {CanvasRenderingContext2D} - canvas context
+   */
+  renderCapitals(ctx) {
+    for (const country of this.countries) {
+      const color = country.altColor
+      ctx.fillStyle = color
+
+      const [x0, y0] = country.capitalCoordinates
+
+      for (const dx of [-1, 0, 1]) {
+        for (const dy of [-1, 0, 1]) {
+          const x = x0 + dx
+          const y = y0 + dy
+          if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
+            continue
+          }
+          const i = this.width * y + x
+          const pixel = this.pixels[i]
+          if (pixel.country === country) {
+            ctx.fillRect(x, y, 1, 1)
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Adds country into the world.
    *
    * @param country {Country} - country
@@ -115,11 +144,13 @@ class Country {
   capitalCoordinates
   name
   color
+  altColor
   pixels = []
 
-  constructor(name, color) {
+  constructor(name, color, altColor) {
     this.name = name
     this.color = color
+    this.altColor = altColor
   }
 
   /**
@@ -175,7 +206,7 @@ function main() {
   const ctx = canvas.getContext('2d')
 
   const world = new World(canvas)
-  const countryObjs = countries.map((country) => new Country(country.name, country.color))
+  const countryObjs = countries.map((country) => new Country(country.name, country.color, country.altColor))
   const occupiedCoordinates = new Set()
 
   for (const country of countryObjs) {
@@ -185,4 +216,5 @@ function main() {
 
   world.allocate()
   world.render(ctx)
+  world.renderCapitals(ctx)
 }
