@@ -1,7 +1,121 @@
+class Pixel {
+  x
+  y
+  country
+  extendable = true
+
+  constructor(x, y, country) {
+    this.x = x
+    this.y = y
+    this.country = country
+  }
+}
+
+class World {
+  width = 0
+  height = 0
+  pixels = []
+  countries = new Set()
+
+  constructor(canvas) {
+    this.width = canvas.width
+    this.height = canvas.height
+    this.pixels.length = this.width * this.height
+  }
+
+  /**
+   * Renders world on the canvas
+   *
+   * @param ctx {CanvasRenderingContext2D} - canvas context
+   */
+  render(ctx) {
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        const i = this.width * y + x
+        const pixel = this.pixels[i]
+        if (pixel) {
+          ctx.fillStyle = pixel.country.color
+          ctx.fillRect(x, y, 1, 1)
+        }
+      }
+    }
+  }
+
+  /**
+   * Adds country into the world.
+   *
+   * @param country {Country} - country
+   * @throws if country is already added or has invalid coordinates
+   */
+  addCountry(country) {
+    if (this.countries.has(country)) {
+      throw new Error(`Country ${country.name} already exists in the world`)
+    }
+
+    const [x, y] = country.capitalCoordinates
+
+    if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
+      console.debug(country.coordinates)
+      throw new Error('Country has coordinates beyond canvas')
+    }
+
+    const i = this.width * y + x
+
+    if (this.pixels[i]) {
+      throw new Error(`Pixel [${x}, ${y}] is already occupied`)
+    }
+
+    const pixel = new Pixel(x, y, country)
+    this.pixels[i] = pixel
+    country.addPixel(pixel)
+    this.countries.add(country)
+  }
+
+  /** Allocates the world among countries by the most straightforward algorithm. */
+  allocate() {
+    let extendablePixelsExist = true
+
+    while (extendablePixelsExist) {
+      extendablePixelsExist = false
+
+      for (const country of this.countries) {
+        const extendablePixels = country.pixels.filter((p) => p.extendable)
+        if (extendablePixels.length) {
+          extendablePixelsExist = true
+
+          for (const pixel of extendablePixels) {
+            pixel.extendable = false
+
+            for (const dx of [-1, 0, 1]) {
+              for (const dy of [-1, 0, 1]) {
+                if (dx === 0 && dy === 0) {
+                  continue
+                }
+                const x = pixel.x + dx
+                const y = pixel.y + dy
+                if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
+                  continue
+                }
+                const i = this.width * y + x
+                if (!this.pixels[i]) {
+                  const pixel = new Pixel(x, y, country)
+                  this.pixels[i] = pixel
+                  country.addPixel(pixel)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 class Country {
   capitalCoordinates
   name
   color
+  pixels = []
 
   constructor(name, color) {
     this.name = name
@@ -18,13 +132,12 @@ class Country {
   }
 
   /**
-   * Draws capital on the canvas as point.
+   * Adds pixel to country. Id est extends country's area by one pixel.
    *
-   * @param ctx {CanvasRenderingContext2D} - canvas context
+   * @param pixel {Pixel} - pixel
    */
-  drawCapital(ctx) {
-    ctx.fillStyle = this.color
-    ctx.fillRect(this.capitalCoordinates[0], this.capitalCoordinates[1], 1, 1)
+  addPixel(pixel) {
+    this.pixels.push(pixel)
   }
 }
 
@@ -61,11 +174,15 @@ function main() {
   const canvas = document.getElementById('canvas')
   const ctx = canvas.getContext('2d')
 
+  const world = new World(canvas)
   const countryObjs = countries.map((country) => new Country(country.name, country.color))
   const occupiedCoordinates = new Set()
 
   for (const country of countryObjs) {
     country.setCapitalCoordinates(getRandomCoordinates(canvas, occupiedCoordinates))
-    country.drawCapital(ctx)
+    world.addCountry(country)
   }
+
+  world.allocate()
+  world.render(ctx)
 }
