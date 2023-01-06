@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8">
+<title>Colors View</title>
+<style>
+#canvas {
+  border: 1px solid #cdcdcd;
+}
+</style>
+<script src="countries.js"></script>
+</head>
+
+<body>
+<canvas id="canvas" width="1300" height="100"></canvas>
+
+<script type="module">
+const canvas = document.getElementById('canvas')
+const ctx = canvas.getContext('2d')
+
+ctx.font = '24px sans-serif'
+ctx.textAlign = 'center'
+ctx.textBaseline = 'middle'
+
+for (let i = 0; i < countries.length; i++) {
+  const country = countries[i]
+  ctx.fillStyle = country.color
+  ctx.fillRect(0 + 50 * i, 0, 50, 100)
+  ctx.fillStyle = country.textColor
+  ctx.fillText(country.name, 25 + 50 * i, 50)
+}
+</script>
+</body>
+
+</html>
