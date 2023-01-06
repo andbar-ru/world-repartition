@@ -1,9 +1,11 @@
 class Country {
   capitalCoordinates
   name
+  color
 
-  constructor(name) {
+  constructor(name, color) {
     this.name = name
+    this.color = color
   }
 
   /**
@@ -21,6 +23,7 @@ class Country {
    * @param ctx {CanvasRenderingContext2D} - canvas context
    */
   drawCapital(ctx) {
+    ctx.fillStyle = this.color
     ctx.fillRect(this.capitalCoordinates[0], this.capitalCoordinates[1], 1, 1)
   }
 }
@@ -58,38 +61,10 @@ function main() {
   const canvas = document.getElementById('canvas')
   const ctx = canvas.getContext('2d')
 
-  const countryNames = [
-    'A',
-    'B',
-    'C',
-    'D',
-    'E',
-    'F',
-    'G',
-    'H',
-    'I',
-    'J',
-    'K',
-    'L',
-    'M',
-    'N',
-    'O',
-    'P',
-    'Q',
-    'R',
-    'S',
-    'T',
-    'U',
-    'V',
-    'W',
-    'X',
-    'Y',
-    'Z',
-  ]
-  const countries = countryNames.map((name) => new Country(name))
+  const countryObjs = countries.map((country) => new Country(country.name, country.color))
   const occupiedCoordinates = new Set()
 
-  for (const country of countries) {
+  for (const country of countryObjs) {
     country.setCapitalCoordinates(getRandomCoordinates(canvas, occupiedCoordinates))
     country.drawCapital(ctx)
   }
