@@ -1,16 +1,17 @@
 import countriesConfig from './countries'
 
+interface CountryMetrics {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+  center: [number, number]
+}
+
 class Pixel {
-  /** x coordinate */
   x: number
-
-  /** y coordinate */
   y: number
-
-  /** What country is pixel */
   country: Country
-
-  /** Pixel (highly likely) has free adjacent pixels */
   extendable = true
 
   constructor(x: number, y: number, country: Country) {
@@ -21,23 +22,13 @@ class Pixel {
 }
 
 class Country {
-  /** Coordinates of the origin */
   origin: [number, number]
-
-  /** Coordinates of the capital. Initially the same as origin. */
   capital: [number, number] | undefined
-
-  /** Country name */
   name: string
-
-  /** Background color */
   color: string
-
-  /** Capital or text color */
   altColor: string
-
-  /** Pixels this country consists of */
   pixels: Pixel[] = []
+  metrics: CountryMetrics | undefined
 
   constructor(name: string, color: string, altColor: string, origin: [number, number]) {
     this.name = name
@@ -47,27 +38,66 @@ class Country {
     this.capital = origin
   }
 
-  /**
-   * Adds pixel to country. Id est extends country's area by one pixel.
-   *
-   * @param pixel - pixel
-   */
   addPixel(pixel: Pixel) {
     this.pixels.push(pixel)
+  }
+
+  calcMetrics(): Country['metrics'] {
+    if (!this.pixels.length) {
+      return undefined
+    }
+
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity,
+      sumX = 0,
+      sumY = 0
+    for (const pixel of this.pixels) {
+      const x = pixel.x
+      const y = pixel.y
+      if (x < minX) {
+        minX = x
+      }
+      if (x > maxX) {
+        maxX = x
+      }
+      if (y < minY) {
+        minY = y
+      }
+      if (y > maxY) {
+        maxY = y
+      }
+      sumX += x
+      sumY += y
+    }
+    const meanX = Math.round(sumX / this.pixels.length)
+    const meanY = Math.round(sumY / this.pixels.length)
+
+    return {
+      minX: minX,
+      maxX: maxX,
+      minY: minY,
+      maxY: maxY,
+      center: [meanX, meanY],
+    }
+  }
+
+  getMetrics(): Country['metrics'] {
+    if (this.metrics) {
+      return this.metrics
+    } else {
+      const metrics = this.calcMetrics()
+      this.metrics = metrics
+      return metrics
+    }
   }
 }
 
 class World {
-  /** Width */
   width = 0
-
-  /** Height */
   height = 0
-
-  /** Pixels */
   pixels: Pixel[] = []
-
-  /** Countries in the world */
   countries: Set<Country> = new Set()
 
   constructor(canvas: HTMLCanvasElement) {
@@ -76,11 +106,6 @@ class World {
     this.pixels.length = this.width * this.height
   }
 
-  /**
-   * Renders world on the canvas
-   *
-   * @param ctx - canvas context
-   */
   render(ctx: CanvasRenderingContext2D) {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
@@ -94,11 +119,6 @@ class World {
     }
   }
 
-  /**
-   * Renders country capitals as rectangle 3x3.
-   *
-   * @param ctx - canvas context
-   */
   renderCapitals(ctx: CanvasRenderingContext2D) {
     for (const country of this.countries) {
       const color = country.altColor
@@ -114,7 +134,7 @@ class World {
         for (const dy of [-1, 0, 1]) {
           const x = x0 + dx
           const y = y0 + dy
-          if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
+          if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
             continue
           }
           const i = this.width * y + x
@@ -127,12 +147,107 @@ class World {
     }
   }
 
-  /**
-   * Adds country into the world.
-   *
-   * @param country - country
-   * @throws if country is already added or has invalid coordinates
-   */
+  checkRectangle(minX: number, maxX: number, minY: number, maxY: number, country: Country): boolean {
+    const capitalPixels: Set<Pixel> = new Set()
+    const capital = country.capital
+    if (capital) {
+      const [x0, y0] = capital
+      const delta = 3
+      for (let x1 = x0 - delta; x1 <= x0 + delta; x1++) {
+        for (let y1 = y0 - delta; y1 <= y0 + delta; y1++) {
+          if (x1 < 0 || x1 >= this.width || y1 < 0 || y1 >= this.height) {
+            continue
+          }
+          const i1 = this.width * y1 + x1
+          capitalPixels.add(this.pixels[i1])
+        }
+      }
+    }
+
+    for (const x of [minX, maxX]) {
+      for (const y of [minY, maxY]) {
+        const i = this.width * y + x
+        if (this.pixels[i].country !== country) {
+          return false
+        }
+      }
+    }
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        const i = this.width * y + x
+        const pixel = this.pixels[i]
+        if (pixel.country !== country || capitalPixels.has(pixel)) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
+  findRectangle(width: number, height: number, country: Country, buffer: number): [number, number] | undefined {
+    const metrics = country.getMetrics()
+    if (!metrics) {
+      return
+    }
+    const halfWidth = Math.ceil(width / 2)
+    const halfHeight = Math.ceil(height / 2)
+    let [x, y] = metrics.center
+    const minX = metrics.minX + halfWidth + buffer
+    const maxX = metrics.maxX - halfWidth - buffer
+    const minY = metrics.minY + halfHeight + buffer
+    const maxY = metrics.maxY - halfHeight - buffer
+
+    let delta = 0
+
+    while (x - delta >= minX && x + delta <= maxX && y - delta >= minY && y + delta <= maxY) {
+      if (!delta) {
+        const ok = this.checkRectangle(x - halfWidth, x + halfWidth, y - halfHeight, y + halfHeight, country)
+        if (ok) {
+          return [x, y]
+        }
+        delta++
+        continue
+      } else {
+        for (const dx of [-delta, 0, delta]) {
+          for (const dy of [-delta, 0, delta]) {
+            if (!dx && !dy) {
+              continue
+            }
+            const x1 = x + dx
+            const y1 = y + dy
+            const ok = this.checkRectangle(x1 - halfWidth, x1 + halfWidth, y1 - halfHeight, y1 + halfHeight, country)
+            if (ok) {
+              return [x1, y1]
+            }
+          }
+        }
+        delta++
+        continue
+      }
+    }
+
+    return
+  }
+
+  renderNames(ctx: CanvasRenderingContext2D) {
+    ctx.font = '12px monospace'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (const country of this.countries) {
+      const textMetrics = ctx.measureText(country.name)
+      const textWidth = textMetrics.width
+      const textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent
+      const xy = this.findRectangle(textWidth, textHeight, country, 1)
+      if (!xy) {
+        continue
+      }
+      const [x, y] = xy
+      ctx.fillStyle = country.altColor
+      ctx.fillText(country.name, x, y)
+    }
+  }
+
   addCountry(country: Country) {
     if (this.countries.has(country)) {
       throw new Error(`Country ${country.name} already exists in the world`)
@@ -197,14 +312,6 @@ class World {
   }
 }
 
-/**
- * Returns random coordinates on canvas except coordinates in occupiedCoordinates.
- *
- * @param canvas - canvas
- * @param occupiedCoordinates - set of occupied coordinates in the form of string `x_y`
- * @returns coordinates
- * @throws if failed to find free coordinates
- */
 function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Set<string>): [number, number] {
   const maxTries = 100
   let tryCount = 1
@@ -225,7 +332,6 @@ function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Se
   throw new Error('Failed to find free coordinates')
 }
 
-/** Main function running on <body> load. */
 function main() {
   const canvas = document.getElementById('canvas')
   if (!(canvas instanceof HTMLCanvasElement)) {
@@ -255,6 +361,7 @@ function main() {
   world.allocate()
   world.render(ctx)
   world.renderCapitals(ctx)
+  world.renderNames(ctx)
 }
 
 main()
