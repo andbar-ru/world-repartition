@@ -27,7 +27,7 @@ class Country {
   name: string
   color: string
   altColor: string
-  pixels: Pixel[] = []
+  pixels: Set<Pixel> = new Set()
   metrics: CountryMetrics | undefined
 
   constructor(name: string, color: string, altColor: string, origin: [number, number]) {
@@ -39,11 +39,11 @@ class Country {
   }
 
   addPixel(pixel: Pixel) {
-    this.pixels.push(pixel)
+    this.pixels.add(pixel)
   }
 
   calcMetrics(): Country['metrics'] {
-    if (!this.pixels.length) {
+    if (!this.pixels.size) {
       return undefined
     }
 
@@ -71,8 +71,8 @@ class Country {
       sumX += x
       sumY += y
     }
-    const meanX = Math.round(sumX / this.pixels.length)
-    const meanY = Math.round(sumY / this.pixels.length)
+    const meanX = Math.round(sumX / this.pixels.size)
+    const meanY = Math.round(sumY / this.pixels.size)
 
     return {
       minX: minX,
@@ -280,7 +280,7 @@ class World {
       extendablePixelsExist = false
 
       for (const country of this.countries) {
-        const extendablePixels = country.pixels.filter((p) => p.extendable)
+        const extendablePixels = Array.from(country.pixels).filter((p) => p.extendable)
         if (extendablePixels.length) {
           extendablePixelsExist = true
 
