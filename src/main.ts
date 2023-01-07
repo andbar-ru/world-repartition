@@ -1,23 +1,57 @@
+import countries from './countries'
+
 class Pixel {
-  x
-  y
-  country
+  x: number
+  y: number
+  country: Country
   extendable = true
 
-  constructor(x, y, country) {
+  constructor(x: number, y: number, country: Country) {
     this.x = x
     this.y = y
     this.country = country
   }
 }
 
+class Country {
+  capitalCoordinates: [number, number] | undefined
+  name: string
+  color: string
+  altColor: string
+  pixels: Pixel[] = []
+
+  constructor(name: string, color: string, altColor: string) {
+    this.name = name
+    this.color = color
+    this.altColor = altColor
+  }
+
+  /**
+   * Sets coordinates of capital (country origin).
+   *
+   * @param coordinates - coordinates
+   */
+  setCapitalCoordinates(coordinates: [number, number]) {
+    this.capitalCoordinates = coordinates
+  }
+
+  /**
+   * Adds pixel to country. Id est extends country's area by one pixel.
+   *
+   * @param pixel - pixel
+   */
+  addPixel(pixel: Pixel) {
+    this.pixels.push(pixel)
+  }
+}
+
 class World {
   width = 0
   height = 0
-  pixels = []
-  countries = new Set()
+  pixels: Pixel[] = []
+  countries: Set<Country> = new Set()
 
-  constructor(canvas) {
+  constructor(canvas: HTMLCanvasElement) {
     this.width = canvas.width
     this.height = canvas.height
     this.pixels.length = this.width * this.height
@@ -26,9 +60,9 @@ class World {
   /**
    * Renders world on the canvas
    *
-   * @param ctx {CanvasRenderingContext2D} - canvas context
+   * @param ctx - canvas context
    */
-  render(ctx) {
+  render(ctx: CanvasRenderingContext2D) {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         const i = this.width * y + x
@@ -44,12 +78,16 @@ class World {
   /**
    * Renders country capitals as rectangle 3x3.
    *
-   * @param ctx {CanvasRenderingContext2D} - canvas context
+   * @param ctx - canvas context
    */
-  renderCapitals(ctx) {
+  renderCapitals(ctx: CanvasRenderingContext2D) {
     for (const country of this.countries) {
       const color = country.altColor
       ctx.fillStyle = color
+
+      if (!country.capitalCoordinates) {
+        throw new Error('Country has no capitalCoordinates')
+      }
 
       const [x0, y0] = country.capitalCoordinates
 
@@ -73,18 +111,22 @@ class World {
   /**
    * Adds country into the world.
    *
-   * @param country {Country} - country
+   * @param country - country
    * @throws if country is already added or has invalid coordinates
    */
-  addCountry(country) {
+  addCountry(country: Country) {
     if (this.countries.has(country)) {
       throw new Error(`Country ${country.name} already exists in the world`)
+    }
+
+    if (!country.capitalCoordinates) {
+      throw new Error('Country has no capitalCoordinates')
     }
 
     const [x, y] = country.capitalCoordinates
 
     if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
-      console.debug(country.coordinates)
+      console.debug(country.capitalCoordinates)
       throw new Error('Country has coordinates beyond canvas')
     }
 
@@ -140,47 +182,15 @@ class World {
   }
 }
 
-class Country {
-  capitalCoordinates
-  name
-  color
-  altColor
-  pixels = []
-
-  constructor(name, color, altColor) {
-    this.name = name
-    this.color = color
-    this.altColor = altColor
-  }
-
-  /**
-   * Sets coordinates of capital (country origin).
-   *
-   * @param coordinates {[number, number]} - coordinates
-   */
-  setCapitalCoordinates(coordinates) {
-    this.capitalCoordinates = coordinates
-  }
-
-  /**
-   * Adds pixel to country. Id est extends country's area by one pixel.
-   *
-   * @param pixel {Pixel} - pixel
-   */
-  addPixel(pixel) {
-    this.pixels.push(pixel)
-  }
-}
-
 /**
  * Returns random coordinates on canvas except coordinates in occupiedCoordinates.
  *
- * @param canvas {HTMLCanvasElement} - canvas
- * @param occupiedCoordinates {Set<string>} - set of occupied coordinates in the form of string `x_y`
- * @returns {[number, number]} coordinates
+ * @param canvas - canvas
+ * @param occupiedCoordinates - set of occupied coordinates in the form of string `x_y`
+ * @returns coordinates
  * @throws if failed to find free coordinates
  */
-function getRandomCoordinates(canvas, occupiedCoordinates) {
+function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Set<string>): [number, number] {
   const maxTries = 100
   let tryCount = 1
 
@@ -203,11 +213,18 @@ function getRandomCoordinates(canvas, occupiedCoordinates) {
 /** Main function running on <body> load. */
 function main() {
   const canvas = document.getElementById('canvas')
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    throw new Error('Could not find element with id "canvas"')
+  }
+
   const ctx = canvas.getContext('2d')
+  if (!(ctx instanceof CanvasRenderingContext2D)) {
+    throw new Error('Could not retrieve canvas context')
+  }
 
   const world = new World(canvas)
   const countryObjs = countries.map((country) => new Country(country.name, country.color, country.altColor))
-  const occupiedCoordinates = new Set()
+  const occupiedCoordinates: Set<string> = new Set()
 
   for (const country of countryObjs) {
     country.setCapitalCoordinates(getRandomCoordinates(canvas, occupiedCoordinates))
@@ -218,3 +235,5 @@ function main() {
   world.render(ctx)
   world.renderCapitals(ctx)
 }
+
+main()
