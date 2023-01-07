@@ -1,9 +1,16 @@
-import countries from './countries'
+import countriesConfig from './countries'
 
 class Pixel {
+  /** x coordinate */
   x: number
+
+  /** y coordinate */
   y: number
+
+  /** What country is pixel */
   country: Country
+
+  /** Pixel (highly likely) has free adjacent pixels */
   extendable = true
 
   constructor(x: number, y: number, country: Country) {
@@ -14,25 +21,30 @@ class Pixel {
 }
 
 class Country {
-  capitalCoordinates: [number, number] | undefined
+  /** Coordinates of the origin */
+  origin: [number, number]
+
+  /** Coordinates of the capital. Initially the same as origin. */
+  capital: [number, number] | undefined
+
+  /** Country name */
   name: string
+
+  /** Background color */
   color: string
+
+  /** Capital or text color */
   altColor: string
+
+  /** Pixels this country consists of */
   pixels: Pixel[] = []
 
-  constructor(name: string, color: string, altColor: string) {
+  constructor(name: string, color: string, altColor: string, origin: [number, number]) {
     this.name = name
     this.color = color
     this.altColor = altColor
-  }
-
-  /**
-   * Sets coordinates of capital (country origin).
-   *
-   * @param coordinates - coordinates
-   */
-  setCapitalCoordinates(coordinates: [number, number]) {
-    this.capitalCoordinates = coordinates
+    this.origin = origin
+    this.capital = origin
   }
 
   /**
@@ -46,9 +58,16 @@ class Country {
 }
 
 class World {
+  /** Width */
   width = 0
+
+  /** Height */
   height = 0
+
+  /** Pixels */
   pixels: Pixel[] = []
+
+  /** Countries in the world */
   countries: Set<Country> = new Set()
 
   constructor(canvas: HTMLCanvasElement) {
@@ -85,11 +104,11 @@ class World {
       const color = country.altColor
       ctx.fillStyle = color
 
-      if (!country.capitalCoordinates) {
-        throw new Error('Country has no capitalCoordinates')
+      if (!country.capital) {
+        continue
       }
 
-      const [x0, y0] = country.capitalCoordinates
+      const [x0, y0] = country.capital
 
       for (const dx of [-1, 0, 1]) {
         for (const dy of [-1, 0, 1]) {
@@ -119,14 +138,10 @@ class World {
       throw new Error(`Country ${country.name} already exists in the world`)
     }
 
-    if (!country.capitalCoordinates) {
-      throw new Error('Country has no capitalCoordinates')
-    }
-
-    const [x, y] = country.capitalCoordinates
+    const [x, y] = country.origin
 
     if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
-      console.debug(country.capitalCoordinates)
+      console.debug(country.capital)
       throw new Error('Country has coordinates beyond canvas')
     }
 
@@ -222,12 +237,18 @@ function main() {
     throw new Error('Could not retrieve canvas context')
   }
 
-  const world = new World(canvas)
-  const countryObjs = countries.map((country) => new Country(country.name, country.color, country.altColor))
   const occupiedCoordinates: Set<string> = new Set()
+  const countryOrigins = countriesConfig.map<[number, number]>(() => getRandomCoordinates(canvas, occupiedCoordinates))
 
-  for (const country of countryObjs) {
-    country.setCapitalCoordinates(getRandomCoordinates(canvas, occupiedCoordinates))
+  const world = new World(canvas)
+  const countries: Country[] = []
+  for (let i = 0; i < countriesConfig.length; i++) {
+    const cc = countriesConfig[i]
+    const origin = countryOrigins[i]
+    countries.push(new Country(cc.name, cc.color, cc.altColor, origin))
+  }
+
+  for (const country of countries) {
     world.addCountry(country)
   }
 
