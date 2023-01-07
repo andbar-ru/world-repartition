@@ -9,13 +9,13 @@
   border: 1px solid #cdcdcd;
 }
 </style>
-<script src="countries.js"></script>
 </head>
 
 <body>
 <canvas id="canvas" width="1300" height="100"></canvas>
 
 <script type="module">
+import countries from './src/countries.ts'
 const canvas = document.getElementById('canvas')
 const ctx = canvas.getContext('2d')
 
@@ -27,7 +27,7 @@ for (let i = 0; i < countries.length; i++) {
   const country = countries[i]
   ctx.fillStyle = country.color
   ctx.fillRect(0 + 50 * i, 0, 50, 100)
-  ctx.fillStyle = country.textColor
+  ctx.fillStyle = country.altColor
   ctx.fillText(country.name, 25 + 50 * i, 50)
 }
 </script>

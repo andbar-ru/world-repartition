@@ -1,6 +1,7 @@
-// Colors are generated on https://mokole.com/palette.html.
+import { CountryConfig } from './types'
 
-const countries = [
+// Colors are generated on https://mokole.com/palette.html.
+const countries: CountryConfig[] = [
   {
     name: 'A',
     color: '#000000', // black
@@ -132,3 +133,5 @@ const countries = [
     altColor: 'black',
   },
 ]
+
+export default countries
