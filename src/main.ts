@@ -1,11 +1,12 @@
-import countriesConfig from './countries'
+import { countries as countriesConfig } from './config'
+import { Position } from './types'
 
 interface CountryMetrics {
   minX: number
   maxX: number
   minY: number
   maxY: number
-  center: [number, number]
+  center: Position
 }
 
 class Pixel {
@@ -18,19 +19,20 @@ class Pixel {
     this.x = x
     this.y = y
     this.country = country
+    this.country.addPixel(this)
   }
 }
 
 class Country {
-  origin: [number, number]
-  capital: [number, number] | undefined
+  origin: Position
+  capital: Position | undefined
   name: string
   color: string
   altColor: string
   pixels: Set<Pixel> = new Set()
   metrics: CountryMetrics | undefined
 
-  constructor(name: string, color: string, altColor: string, origin: [number, number]) {
+  constructor(name: string, color: string, altColor: string, origin: Position) {
     this.name = name
     this.color = color
     this.altColor = altColor
@@ -106,11 +108,18 @@ class World {
     this.pixels.length = this.width * this.height
   }
 
+  getPixel(x: number, y: number): Pixel | void {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return
+    }
+    const i = this.width * y + x
+    return this.pixels[i]
+  }
+
   render(ctx: CanvasRenderingContext2D) {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
-        const i = this.width * y + x
-        const pixel = this.pixels[i]
+        const pixel = this.getPixel(x, y)
         if (pixel) {
           ctx.fillStyle = pixel.country.color
           ctx.fillRect(x, y, 1, 1)
@@ -134,11 +143,10 @@ class World {
         for (const dy of [-1, 0, 1]) {
           const x = x0 + dx
           const y = y0 + dy
-          if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+          const pixel = this.getPixel(x, y)
+          if (!pixel) {
             continue
           }
-          const i = this.width * y + x
-          const pixel = this.pixels[i]
           if (pixel.country === country) {
             ctx.fillRect(x, y, 1, 1)
           }
@@ -155,28 +163,27 @@ class World {
       const delta = 3
       for (let x1 = x0 - delta; x1 <= x0 + delta; x1++) {
         for (let y1 = y0 - delta; y1 <= y0 + delta; y1++) {
-          if (x1 < 0 || x1 >= this.width || y1 < 0 || y1 >= this.height) {
+          const pixel = this.getPixel(x1, y1)
+          if (!pixel) {
             continue
           }
-          const i1 = this.width * y1 + x1
-          capitalPixels.add(this.pixels[i1])
+          capitalPixels.add(pixel)
         }
       }
     }
 
     for (const x of [minX, maxX]) {
       for (const y of [minY, maxY]) {
-        const i = this.width * y + x
-        if (this.pixels[i].country !== country) {
+        const pixel = this.getPixel(x, y)
+        if (!pixel || pixel.country !== country) {
           return false
         }
       }
     }
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
-        const i = this.width * y + x
-        const pixel = this.pixels[i]
-        if (pixel.country !== country || capitalPixels.has(pixel)) {
+        const pixel = this.getPixel(x, y)
+        if (!pixel || pixel.country !== country || capitalPixels.has(pixel)) {
           return false
         }
       }
@@ -185,7 +192,7 @@ class World {
     return true
   }
 
-  findRectangle(width: number, height: number, country: Country, buffer: number): [number, number] | undefined {
+  findRectangle(width: number, height: number, country: Country, buffer: number): Position | undefined {
     const metrics = country.getMetrics()
     if (!metrics) {
       return
@@ -231,7 +238,7 @@ class World {
   }
 
   renderNames(ctx: CanvasRenderingContext2D) {
-    ctx.font = '12px monospace'
+    ctx.font = '12px Terminus' // pixel perfect font but only in Firefox
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     for (const country of this.countries) {
@@ -261,14 +268,12 @@ class World {
     }
 
     const i = this.width * y + x
-
     if (this.pixels[i]) {
       throw new Error(`Pixel [${x}, ${y}] is already occupied`)
     }
 
     const pixel = new Pixel(x, y, country)
     this.pixels[i] = pixel
-    country.addPixel(pixel)
     this.countries.add(country)
   }
 
@@ -294,14 +299,13 @@ class World {
                 }
                 const x = pixel.x + dx
                 const y = pixel.y + dy
-                if (x < 0 || x > this.width - 1 || y < 0 || y > this.height - 1) {
+                if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
                   continue
                 }
                 const i = this.width * y + x
                 if (!this.pixels[i]) {
                   const pixel = new Pixel(x, y, country)
                   this.pixels[i] = pixel
-                  country.addPixel(pixel)
                 }
               }
             }
@@ -312,7 +316,7 @@ class World {
   }
 }
 
-function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Set<string>): [number, number] {
+function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Set<string>): Position {
   const maxTries = 100
   let tryCount = 1
 
@@ -344,7 +348,7 @@ function main() {
   }
 
   const occupiedCoordinates: Set<string> = new Set()
-  const countryOrigins = countriesConfig.map<[number, number]>(() => getRandomCoordinates(canvas, occupiedCoordinates))
+  const countryOrigins = countriesConfig.map<Position>(() => getRandomCoordinates(canvas, occupiedCoordinates))
 
   const world = new World(canvas)
   const countries: Country[] = []
