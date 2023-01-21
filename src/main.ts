@@ -1,20 +1,38 @@
 import { countries as countriesConfig } from './config'
 import { Position } from './types'
 
+/** Country metrics. */
 interface CountryMetrics {
+  /** Minimal X */
   minX: number
+  /** Maximal X */
   maxX: number
+  /** Minimal Y */
   minY: number
+  /** Maximal Y */
   maxY: number
+  /** Coordinates of the center of gravity */
   center: Position
 }
 
+/** Represents one pixel on a canvas. */
 class Pixel {
-  x: number
-  y: number
-  country: Country
-  extendable = true
+  /** X-coordinate */
+  public x: number
+  /** Y-coordinate */
+  public y: number
+  /** Country having this pixel */
+  public country: Country
+  /** Pixel has free pixels around */
+  public extendable = true
 
+  /**
+   * The constructor of the `Pixel` class.
+   *
+   * @param x - X-coordinate
+   * @param y - Y-coordinate
+   * @param country - instance of `Country` class
+   */
   constructor(x: number, y: number, country: Country) {
     this.x = x
     this.y = y
@@ -23,15 +41,31 @@ class Pixel {
   }
 }
 
+/** Represents a country. */
 class Country {
-  origin: Position
-  capital: Position | undefined
-  name: string
-  color: string
-  altColor: string
-  pixels: Set<Pixel> = new Set()
-  metrics: CountryMetrics | undefined
+  /** Coordinates of the origin */
+  public origin: Position
+  /** Coordinates of the capital */
+  public capital: Position | undefined
+  /** Country name */
+  public name: string
+  /** Country color on a canvas */
+  public color: string
+  /** ALternative color. Used for capital and name */
+  public altColor: string
+  /** Pixels that make up the country */
+  public pixels: Set<Pixel> = new Set()
+  /** Country metrics */
+  public metrics: CountryMetrics | undefined
 
+  /**
+   * The constructor of the `Country` class.
+   *
+   * @param name - Country name
+   * @param color - Background color
+   * @param altColor - Alternative color
+   * @param origin - Coordinates of the country origin
+   */
   constructor(name: string, color: string, altColor: string, origin: Position) {
     this.name = name
     this.color = color
@@ -40,11 +74,21 @@ class Country {
     this.capital = origin
   }
 
-  addPixel(pixel: Pixel) {
+  /**
+   * Assignes pixel to the country.
+   *
+   * @param pixel - instance of the `Pixel` class
+   */
+  public addPixel(pixel: Pixel) {
     this.pixels.add(pixel)
   }
 
-  calcMetrics(): Country['metrics'] {
+  /**
+   * Calculates country metrics.
+   *
+   * @returns Metrics or undefined if country has no pixels
+   */
+  private calcMetrics(): Country['metrics'] {
     if (!this.pixels.size) {
       return undefined
     }
@@ -85,7 +129,12 @@ class Country {
     }
   }
 
-  getMetrics(): Country['metrics'] {
+  /**
+   * Returns country metrics if already calculated. If no, calculates and returns.
+   *
+   * @returns Metrics
+   */
+  public getMetrics(): Country['metrics'] {
     if (this.metrics) {
       return this.metrics
     } else {
@@ -96,19 +145,36 @@ class Country {
   }
 }
 
+/** Represents the world. Fills the entire canvas. */
 class World {
+  /** Width */
   width = 0
+  /** Height */
   height = 0
+  /** Pixels the world consists of */
   pixels: Pixel[] = []
+  /** Countries in the world */
   countries: Set<Country> = new Set()
 
+  /**
+   * The constructor of the `World` class.
+   *
+   * @param canvas - Canvas
+   */
   constructor(canvas: HTMLCanvasElement) {
     this.width = canvas.width
     this.height = canvas.height
     this.pixels.length = this.width * this.height
   }
 
-  getPixel(x: number, y: number): Pixel | void {
+  /**
+   * Return pixel represented by coordinates.
+   *
+   * @param x - X-coordinate
+   * @param y - Y-coordinate
+   * @returns Pixel or undefined if coordinates are beyond the world
+   */
+  private getPixel(x: number, y: number): Pixel | undefined {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
       return
     }
@@ -116,7 +182,12 @@ class World {
     return this.pixels[i]
   }
 
-  render(ctx: CanvasRenderingContext2D) {
+  /**
+   * Renders the world on the canvas.
+   *
+   * @param ctx - Canvas context
+   */
+  public render(ctx: CanvasRenderingContext2D) {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         const pixel = this.getPixel(x, y)
@@ -128,7 +199,12 @@ class World {
     }
   }
 
-  renderCapitals(ctx: CanvasRenderingContext2D) {
+  /**
+   * Renders only capitals on the canvas.
+   *
+   * @param ctx - Canvas context
+   */
+  public renderCapitals(ctx: CanvasRenderingContext2D) {
     for (const country of this.countries) {
       const color = country.altColor
       ctx.fillStyle = color
@@ -155,7 +231,18 @@ class World {
     }
   }
 
-  checkRectangle(minX: number, maxX: number, minY: number, maxY: number, country: Country): boolean {
+  /**
+   * Checks that all pixels of the rectangle belong to the same country and are not under the
+   * country's capital.
+   *
+   * @param minX - X-coordinate of the rectangle top left corner
+   * @param maxX - X-coordinate of the rectangle bottom right corner
+   * @param minY - Y-coordinate of the rectangle top left corner
+   * @param maxY - Y-coordinate of the rectangle bottom right corner
+   * @param country - Country
+   * @returns Result
+   */
+  private checkRectangle(minX: number, maxX: number, minY: number, maxY: number, country: Country): boolean {
     const capitalPixels: Set<Pixel> = new Set()
     const capital = country.capital
     if (capital) {
@@ -192,7 +279,16 @@ class World {
     return true
   }
 
-  findRectangle(width: number, height: number, country: Country, buffer: number): Position | undefined {
+  /**
+   * Searches for a rectangle whose pixels all belong to the same country and are free.
+   *
+   * @param width - Rectangle width
+   * @param height - Rectangle height
+   * @param country - Country
+   * @param buffer - Buffer around the rectangle, in pixels, that must be also free
+   * @returns Coordinates of the rectangle center if it found, or undefined otherwise
+   */
+  private findRectangle(width: number, height: number, country: Country, buffer: number): Position | undefined {
     const metrics = country.getMetrics()
     if (!metrics) {
       return
@@ -237,7 +333,12 @@ class World {
     return
   }
 
-  renderNames(ctx: CanvasRenderingContext2D) {
+  /**
+   * Render country names on the canvas.
+   *
+   * @param ctx - Canvas context
+   */
+  public renderNames(ctx: CanvasRenderingContext2D) {
     ctx.font = '12px Terminus' // pixel perfect font but only in Firefox
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -255,7 +356,12 @@ class World {
     }
   }
 
-  addCountry(country: Country) {
+  /**
+   * Adds country to the world.
+   *
+   * @param country - Country
+   */
+  public addCountry(country: Country) {
     if (this.countries.has(country)) {
       throw new Error(`Country ${country.name} already exists in the world`)
     }
@@ -278,7 +384,7 @@ class World {
   }
 
   /** Allocates the world among countries by the most straightforward algorithm. */
-  allocate() {
+  public allocate() {
     let extendablePixelsExist = true
 
     while (extendablePixelsExist) {
@@ -316,6 +422,14 @@ class World {
   }
 }
 
+/**
+ * Return random coordinates on the canvas.
+ *
+ * @param canvas - Canvas
+ * @param occupiedCoordinates - Already occupied coordinates in string format.
+ * @returns Coordinates
+ * @throws If failed to find unoccupied coordinates
+ */
 function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Set<string>): Position {
   const maxTries = 100
   let tryCount = 1
@@ -336,6 +450,7 @@ function getRandomCoordinates(canvas: HTMLCanvasElement, occupiedCoordinates: Se
   throw new Error('Failed to find free coordinates')
 }
 
+/** Main function */
 function main() {
   const canvas = document.getElementById('canvas')
   if (!(canvas instanceof HTMLCanvasElement)) {
