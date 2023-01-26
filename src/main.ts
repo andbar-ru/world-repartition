@@ -22,8 +22,8 @@ function main() {
   const world = new World(canvas)
   const countries: Country[] = []
   for (let i = 0; i < countriesConfig.length; i++) {
-    const cc = countriesConfig[i]
-    const origin = countryOrigins[i]
+    const cc = countriesConfig[i]!
+    const origin = countryOrigins[i]!
     countries.push(new Country(cc.name, cc.color, cc.altColor, origin))
   }
 
