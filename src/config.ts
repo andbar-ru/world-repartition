@@ -1,3 +1,8 @@
+export const canvas = {
+  width: 300,
+  height: 300,
+} as const
+
 // Colors are taken from https://www.aic-color.org/resources/Documents/jaic_v5_06.pdf.
 // Alternate colors are assigned by "L" in LAB color space
 export const countries = [

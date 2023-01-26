@@ -1,4 +1,4 @@
-import { countries as countriesConfig } from './config'
+import { countries as countriesConfig, canvas as canvasConfig } from './config'
 import { Position } from './types'
 import { getRandomCoordinates } from './utils'
 import World from './World'
@@ -6,10 +6,11 @@ import Country from './Country'
 
 /** Main function */
 function main() {
-  const canvas = document.getElementById('canvas')
-  if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error('Could not find element with id "canvas"')
-  }
+  const canvas = document.createElement('canvas')
+  canvas.width = canvasConfig.width
+  canvas.height = canvasConfig.height
+  canvas.classList.add('canvas')
+  document.body.appendChild(canvas)
 
   const ctx = canvas.getContext('2d')
   if (!(ctx instanceof CanvasRenderingContext2D)) {
