@@ -16,11 +16,12 @@ export default class World {
   /**
    * The constructor of the `World` class.
    *
-   * @param canvas - Canvas
+   * @param width - Width
+   * @param height - Height
    */
-  constructor(canvas: HTMLCanvasElement) {
-    this.width = canvas.width
-    this.height = canvas.height
+  constructor(width: number, height: number) {
+    this.width = width
+    this.height = height
     this.pixels.length = this.width * this.height
   }
 
