@@ -7,14 +7,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>World Repartition</title>
 <style>
-#canvas {
+.hidden {
+  display: none;
+}
+
+#layers {
+  margin-bottom: 10px;
+}
+
+#layers > label {
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+#layers > input {
+  cursor: pointer;
+}
+
+#canvas-container {
+  position: relative;
+}
+
+.canvas {
   border: 1px solid #cdcdcd;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 </style>
 </head>
 
 <body>
-<canvas id="canvas" width="300" height="300"></canvas>
+<div id="throbber">Initializing...</div>
+
+<main id="main" class="hidden">
+  <div id="layers">
+    Layers:
+    <input type="checkbox" id="countries-toggle" class="layer-toggle" data-id="countries" checked>
+    <label for="countries-toggle">Countries</label>
+    <input type="checkbox" id="capitals-toggle" class="layer-toggle" data-id="capitals" checked>
+    <label for="capitals-toggle">Capitals</label>
+    <input type="checkbox" id="names-toggle" class="layer-toggle" data-id="names" checked>
+    <label for="names-toggle">Names</label>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="countries-canvas" class="canvas" data-id="countries"></canvas>
+    <canvas id="capitals-canvas" class="canvas" data-id="capitals"></canvas>
+    <canvas id="names-canvas" class="canvas" data-id="names"></canvas>
+  </div>
+</main>
+
 <script type="module" src="/src/main.ts"></script>
 </body>
 

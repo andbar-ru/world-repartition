@@ -1,12 +1,11 @@
-export interface Country {
-  name: string
-  color: string
-  altColor: string
-}
+export const canvas = {
+  width: 300,
+  height: 300,
+} as const
 
 // Colors are taken from https://www.aic-color.org/resources/Documents/jaic_v5_06.pdf.
 // Alternate colors are assigned by "L" in LAB color space
-export const countries: Country[] = [
+export const countries = [
   {
     name: 'A',
     color: 'rgb(240, 163, 255)', // Amethyst
@@ -137,4 +136,4 @@ export const countries: Country[] = [
     color: 'rgb(255, 80, 5)', // Zinnia
     altColor: 'black',
   },
-]
+] as const
