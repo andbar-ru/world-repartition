@@ -9,7 +9,7 @@ export default class World {
   /** Height */
   height = 0
   /** Pixels the world consists of */
-  pixels: Pixel[] = []
+  pixels: ReadonlyArray<ReadonlyArray<Pixel>> = []
   /** Countries in the world */
   countries: Set<Country> = new Set()
 
@@ -22,37 +22,33 @@ export default class World {
   constructor(width: number, height: number) {
     this.width = width
     this.height = height
-    this.pixels.length = this.width * this.height
-  }
 
-  /**
-   * Return pixel represented by coordinates.
-   *
-   * @param x - X-coordinate
-   * @param y - Y-coordinate
-   * @returns Pixel or undefined if coordinates are beyond the world
-   */
-  private getPixel(x: number, y: number): Pixel | undefined {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-      return
+    const pixels: Array<ReadonlyArray<Pixel>> = []
+
+    for (let x = 0; x < width; x++) {
+      const row: Pixel[] = []
+      for (let y = 0; y < height; y++) {
+        const pixel = new Pixel(x, y)
+        row.push(pixel)
+      }
+      pixels.push(Object.freeze(row))
     }
-    const i = this.width * y + x
-    return this.pixels[i]
+
+    this.pixels = Object.freeze(pixels)
   }
 
   /**
-   * Renders the world on the canvas.
+   * Renders countries on the canvas.
    *
    * @param ctx - Canvas context
    */
-  public render(ctx: CanvasRenderingContext2D) {
+  public renderCountries(ctx: CanvasRenderingContext2D) {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
-        const pixel = this.getPixel(x, y)
-        if (pixel) {
-          ctx.fillStyle = pixel.country.color
-          ctx.fillRect(x, y, 1, 1)
-        }
+        const pixel = this.pixels[x]![y]!
+        const color = pixel.country?.color ?? 'transparent'
+        ctx.fillStyle = color
+        ctx.fillRect(x, y, 1, 1)
       }
     }
   }
@@ -77,7 +73,7 @@ export default class World {
         for (const dy of [-1, 0, 1]) {
           const x = x0 + dx
           const y = y0 + dy
-          const pixel = this.getPixel(x, y)
+          const pixel = this.pixels[x]?.[y]
           if (!pixel) {
             continue
           }
@@ -108,7 +104,7 @@ export default class World {
       const delta = 3
       for (let x1 = x0 - delta; x1 <= x0 + delta; x1++) {
         for (let y1 = y0 - delta; y1 <= y0 + delta; y1++) {
-          const pixel = this.getPixel(x1, y1)
+          const pixel = this.pixels[x1]?.[y1]
           if (!pixel) {
             continue
           }
@@ -119,7 +115,7 @@ export default class World {
 
     for (const x of [minX, maxX]) {
       for (const y of [minY, maxY]) {
-        const pixel = this.getPixel(x, y)
+        const pixel = this.pixels[x]?.[y]
         if (!pixel || pixel.country !== country) {
           return false
         }
@@ -127,7 +123,7 @@ export default class World {
     }
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
-        const pixel = this.getPixel(x, y)
+        const pixel = this.pixels[x]?.[y]
         if (!pixel || pixel.country !== country || capitalPixels.has(pixel)) {
           return false
         }
@@ -231,13 +227,13 @@ export default class World {
       throw new Error('Country has coordinates beyond canvas')
     }
 
-    const i = this.width * y + x
-    if (this.pixels[i]) {
+    const pixel = this.pixels[x]![y]! // pixel certainly exists, based on checks above
+
+    if (pixel.country) {
       throw new Error(`Pixel [${x}, ${y}] is already occupied`)
     }
 
-    const pixel = new Pixel(x, y, country)
-    this.pixels[i] = pixel
+    pixel.setCountry(country)
     this.countries.add(country)
   }
 
@@ -266,10 +262,9 @@ export default class World {
                 if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
                   continue
                 }
-                const i = this.width * y + x
-                if (!this.pixels[i]) {
-                  const pixel = new Pixel(x, y, country)
-                  this.pixels[i] = pixel
+                const p = this.pixels[x]![y]! // pixel certainly exists, based on checks above
+                if (!p.country) {
+                  p.setCountry(country)
                 }
               }
             }

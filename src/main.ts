@@ -128,6 +128,7 @@ function main() {
   )
 
   const world = new World(canvasWidth, canvasHeight)
+
   const countries: Country[] = []
   for (let i = 0; i < countriesConfig.length; i++) {
     const cc = countriesConfig[i]!
@@ -140,7 +141,7 @@ function main() {
   }
 
   world.allocate()
-  world.render(countriesCtx)
+  world.renderCountries(countriesCtx)
   world.renderCapitals(capitalsCtx)
   world.renderNames(namesCtx)
 
