@@ -137,3 +137,12 @@ export const countries = [
     altColor: 'black',
   },
 ] as const
+
+/** Land to sea ratio. Keep in mind that this ratio is not in the sense of pixels but origins. */
+export const landToSeaRatio = [30, 70]
+
+/** Color of land pixels. Can be the same as of some country. */
+export const landColor = 'black'
+
+/** Color of sea pixels. Must be defferent from that of any of the countries. */
+export const seaColor = 'white'
