@@ -7,7 +7,9 @@ export default class Pixel {
   /** Y-coordinate */
   public y: number
   /** Country having this pixel */
-  public country: Country
+  public country: Country | undefined
+  /** Is land, not sea */
+  public isLand: boolean | undefined
   /** Pixel is likely to have free pixels around */
   public extendable = true
 
@@ -16,11 +18,18 @@ export default class Pixel {
    *
    * @param x - X-coordinate
    * @param y - Y-coordinate
-   * @param country - instance of `Country` class
    */
-  constructor(x: number, y: number, country: Country) {
+  constructor(x: number, y: number) {
     this.x = x
     this.y = y
+  }
+
+  /**
+   * Sets country to the pixel.
+   *
+   * @param country - Country
+   */
+  public setCountry(country: Country) {
     this.country = country
     this.country.addPixel(this)
   }

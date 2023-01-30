@@ -34,7 +34,7 @@ function toggleLayer(event: Event) {
 
 /** Main function */
 function main() {
-  /* Check and initialize html elements. <<END */
+  /* Check and initialize html elements. <<HTML END */
   const main = document.getElementById('main')
   if (!main) {
     throw new Error('Could not find element with id="main"')
@@ -45,11 +45,22 @@ function main() {
     throw new Error('Could not find element with id="throbber"')
   }
 
+  /* Initialize all canvases <<CANVAS END */
+  const surfaceCanvas = document.getElementById('surface-canvas')
+  if (!(surfaceCanvas instanceof HTMLCanvasElement)) {
+    throw new Error('Could not find canvas with id="surface-canvas"')
+  }
+  let id = surfaceCanvas.dataset['id']
+  if (id !== 'surface') {
+    throw new Error('canvas[id="surface-canvas"] must have data-id="surface"')
+  }
+  canvases['surface'] = surfaceCanvas
+
   const countriesCanvas = document.getElementById('countries-canvas')
   if (!(countriesCanvas instanceof HTMLCanvasElement)) {
     throw new Error('Could not find canvas with id="countries-canvas"')
   }
-  let id = countriesCanvas.dataset['id']
+  id = countriesCanvas.dataset['id']
   if (id !== 'countries') {
     throw new Error('canvas[id="countries-canvas"] must have data-id="countries"')
   }
@@ -82,6 +93,7 @@ function main() {
     canvas.width = canvasWidth
     canvas.height = canvasHeight
   }
+  /* CANVAS END */
 
   const layerToggles = Array.from(document.getElementsByClassName('layer-toggle')).filter(
     (el) => el instanceof HTMLInputElement
@@ -93,7 +105,12 @@ function main() {
   for (const toggle of layerToggles) {
     toggle.addEventListener('change', toggleLayer)
   }
-  /* END */
+  /* HTML END */
+
+  const surfaceCtx = surfaceCanvas.getContext('2d')
+  if (!(surfaceCtx instanceof CanvasRenderingContext2D)) {
+    throw new Error('Could not retrieve canvas context')
+  }
 
   const countriesCtx = countriesCanvas.getContext('2d')
   if (!(countriesCtx instanceof CanvasRenderingContext2D)) {
@@ -116,19 +133,20 @@ function main() {
   )
 
   const world = new World(canvasWidth, canvasHeight)
+
   const countries: Country[] = []
   for (let i = 0; i < countriesConfig.length; i++) {
     const cc = countriesConfig[i]!
     const origin = countryOrigins[i]!
     countries.push(new Country(cc.name, cc.color, cc.altColor, origin))
   }
-
   for (const country of countries) {
     world.addCountry(country)
   }
+  world.allocateCountries()
 
-  world.allocate()
-  world.render(countriesCtx)
+  world.renderSurface(surfaceCtx)
+  world.renderCountries(countriesCtx)
   world.renderCapitals(capitalsCtx)
   world.renderNames(namesCtx)
 

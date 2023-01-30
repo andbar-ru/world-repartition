@@ -1,6 +1,8 @@
 import Pixel from './Pixel'
 import Country from './Country'
 import { Position } from './types'
+import { landToSeaRatio, landColor, seaColor } from './config'
+import { getRandomCoordinates } from './utils'
 
 /** Represents the world. Fills the entire canvas. */
 export default class World {
@@ -9,7 +11,7 @@ export default class World {
   /** Height */
   height = 0
   /** Pixels the world consists of */
-  pixels: Pixel[] = []
+  pixels: ReadonlyArray<ReadonlyArray<Pixel>> = []
   /** Countries in the world */
   countries: Set<Country> = new Set()
 
@@ -22,37 +24,50 @@ export default class World {
   constructor(width: number, height: number) {
     this.width = width
     this.height = height
-    this.pixels.length = this.width * this.height
-  }
 
-  /**
-   * Return pixel represented by coordinates.
-   *
-   * @param x - X-coordinate
-   * @param y - Y-coordinate
-   * @returns Pixel or undefined if coordinates are beyond the world
-   */
-  private getPixel(x: number, y: number): Pixel | undefined {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-      return
+    const pixels: Array<ReadonlyArray<Pixel>> = []
+
+    for (let x = 0; x < width; x++) {
+      const row: Pixel[] = []
+      for (let y = 0; y < height; y++) {
+        const pixel = new Pixel(x, y)
+        row.push(pixel)
+      }
+      pixels.push(Object.freeze(row))
     }
-    const i = this.width * y + x
-    return this.pixels[i]
+
+    this.pixels = Object.freeze(pixels)
+
+    this.allocateSurface()
   }
 
   /**
-   * Renders the world on the canvas.
+   * Renders surface on the canvas.
    *
    * @param ctx - Canvas context
    */
-  public render(ctx: CanvasRenderingContext2D) {
+  public renderSurface(ctx: CanvasRenderingContext2D) {
+    for (const row of this.pixels) {
+      for (const pixel of row) {
+        const color = pixel.isLand ? landColor : seaColor
+        ctx.fillStyle = color
+        ctx.fillRect(pixel.x, pixel.y, 1, 1)
+      }
+    }
+  }
+
+  /**
+   * Renders countries on the canvas.
+   *
+   * @param ctx - Canvas context
+   */
+  public renderCountries(ctx: CanvasRenderingContext2D) {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
-        const pixel = this.getPixel(x, y)
-        if (pixel) {
-          ctx.fillStyle = pixel.country.color
-          ctx.fillRect(x, y, 1, 1)
-        }
+        const pixel = this.pixels[x]![y]!
+        const color = pixel.country?.color ?? 'transparent'
+        ctx.fillStyle = color
+        ctx.fillRect(x, y, 1, 1)
       }
     }
   }
@@ -77,7 +92,7 @@ export default class World {
         for (const dy of [-1, 0, 1]) {
           const x = x0 + dx
           const y = y0 + dy
-          const pixel = this.getPixel(x, y)
+          const pixel = this.pixels[x]?.[y]
           if (!pixel) {
             continue
           }
@@ -108,7 +123,7 @@ export default class World {
       const delta = 3
       for (let x1 = x0 - delta; x1 <= x0 + delta; x1++) {
         for (let y1 = y0 - delta; y1 <= y0 + delta; y1++) {
-          const pixel = this.getPixel(x1, y1)
+          const pixel = this.pixels[x1]?.[y1]
           if (!pixel) {
             continue
           }
@@ -119,7 +134,7 @@ export default class World {
 
     for (const x of [minX, maxX]) {
       for (const y of [minY, maxY]) {
-        const pixel = this.getPixel(x, y)
+        const pixel = this.pixels[x]?.[y]
         if (!pixel || pixel.country !== country) {
           return false
         }
@@ -127,7 +142,7 @@ export default class World {
     }
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
-        const pixel = this.getPixel(x, y)
+        const pixel = this.pixels[x]?.[y]
         if (!pixel || pixel.country !== country || capitalPixels.has(pixel)) {
           return false
         }
@@ -231,18 +246,116 @@ export default class World {
       throw new Error('Country has coordinates beyond canvas')
     }
 
-    const i = this.width * y + x
-    if (this.pixels[i]) {
+    const pixel = this.pixels[x]![y]! // pixel certainly exists, based on checks above
+
+    if (pixel.country) {
       throw new Error(`Pixel [${x}, ${y}] is already occupied`)
     }
 
-    const pixel = new Pixel(x, y, country)
-    this.pixels[i] = pixel
+    pixel.setCountry(country)
     this.countries.add(country)
   }
 
+  /** Makes all pixels extendable. */
+  private setAllPixelsExtendable() {
+    for (const row of this.pixels) {
+      for (const pixel of row) {
+        pixel.extendable = true
+      }
+    }
+  }
+
+  /** Allocates the world among the land and the sea by the most straightforward algorithm. */
+  private allocateSurface() {
+    // If sea is 0, the whole world is the land.
+    if (landToSeaRatio[1] === 0) {
+      for (const row of this.pixels) {
+        for (const pixel of row) {
+          pixel.isLand = true
+        }
+      }
+      return
+    }
+
+    if (landToSeaRatio[0] < 0 || landToSeaRatio[1] < 0) {
+      throw new Error('All `landToSeaRatio` items must be nonnegative numbers')
+    }
+
+    this.setAllPixelsExtendable()
+
+    const occupiedCoordinates: Set<string> = new Set()
+    const landOrigins: Position[] = []
+    for (let i = 0; i < landToSeaRatio[0]; i++) {
+      landOrigins.push(getRandomCoordinates(0, 0, this.width - 1, this.height - 1, occupiedCoordinates))
+    }
+    const seaOrigins: Position[] = []
+    for (let i = 0; i < landToSeaRatio[1]; i++) {
+      seaOrigins.push(getRandomCoordinates(0, 0, this.width - 1, this.height - 1, occupiedCoordinates))
+    }
+
+    interface SurfaceItem {
+      isLand: boolean
+      pixels: Set<Pixel>
+    }
+
+    const items: SurfaceItem[] = []
+
+    for (const origin of landOrigins) {
+      const [x, y] = origin
+      const pixels: [Pixel] = [this.pixels[x]![y]!] // pixel certainly exists, based on code above
+      items.push({
+        isLand: true,
+        pixels: new Set(pixels),
+      })
+    }
+
+    for (const origin of seaOrigins) {
+      const [x, y] = origin
+      const pixels: [Pixel] = [this.pixels[x]![y]!] // pixel certainly exists, based on code above
+      items.push({
+        isLand: false,
+        pixels: new Set(pixels),
+      })
+    }
+
+    let extendablePixelsExist = true
+
+    while (extendablePixelsExist) {
+      extendablePixelsExist = false
+
+      for (const item of items) {
+        const extendablePixels = Array.from(item.pixels).filter((p) => p.extendable)
+        if (extendablePixels.length) {
+          extendablePixelsExist = true
+
+          for (const pixel of extendablePixels) {
+            pixel.extendable = false
+
+            for (let x = pixel.x - 1; x <= pixel.x + 1; x++) {
+              for (let y = pixel.y - 1; y <= pixel.y + 1; y++) {
+                if (x === pixel.x && y === pixel.y) {
+                  continue
+                }
+                if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                  continue
+                }
+                const p = this.pixels[x]![y]!
+                if (p.isLand === undefined) {
+                  p.isLand = item.isLand
+                  item.pixels.add(p)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   /** Allocates the world among countries by the most straightforward algorithm. */
-  public allocate() {
+  public allocateCountries() {
+    this.setAllPixelsExtendable()
+
     let extendablePixelsExist = true
 
     while (extendablePixelsExist) {
@@ -266,10 +379,9 @@ export default class World {
                 if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
                   continue
                 }
-                const i = this.width * y + x
-                if (!this.pixels[i]) {
-                  const pixel = new Pixel(x, y, country)
-                  this.pixels[i] = pixel
+                const p = this.pixels[x]![y]! // pixel certainly exists, based on checks above
+                if (!p.country) {
+                  p.setCountry(country)
                 }
               }
             }
