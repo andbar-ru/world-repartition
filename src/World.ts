@@ -1,6 +1,8 @@
 import Pixel from './Pixel'
 import Country from './Country'
 import { Position } from './types'
+import { landToSeaRatio, landColor, seaColor } from './config'
+import { getRandomCoordinates } from './utils'
 
 /** Represents the world. Fills the entire canvas. */
 export default class World {
@@ -35,6 +37,23 @@ export default class World {
     }
 
     this.pixels = Object.freeze(pixels)
+
+    this.allocateSurface()
+  }
+
+  /**
+   * Renders surface on the canvas.
+   *
+   * @param ctx - Canvas context
+   */
+  public renderSurface(ctx: CanvasRenderingContext2D) {
+    for (const row of this.pixels) {
+      for (const pixel of row) {
+        const color = pixel.isLand ? landColor : seaColor
+        ctx.fillStyle = color
+        ctx.fillRect(pixel.x, pixel.y, 1, 1)
+      }
+    }
   }
 
   /**
@@ -237,8 +256,106 @@ export default class World {
     this.countries.add(country)
   }
 
+  /** Makes all pixels extendable. */
+  private setAllPixelsExtendable() {
+    for (const row of this.pixels) {
+      for (const pixel of row) {
+        pixel.extendable = true
+      }
+    }
+  }
+
+  /** Allocates the world among the land and the sea by the most straightforward algorithm. */
+  private allocateSurface() {
+    // If sea is 0, the whole world is the land.
+    if (landToSeaRatio[1] === 0) {
+      for (const row of this.pixels) {
+        for (const pixel of row) {
+          pixel.isLand = true
+        }
+      }
+      return
+    }
+
+    if (landToSeaRatio[0] < 0 || landToSeaRatio[1] < 0) {
+      throw new Error('All `landToSeaRatio` items must be nonnegative numbers')
+    }
+
+    this.setAllPixelsExtendable()
+
+    const occupiedCoordinates: Set<string> = new Set()
+    const landOrigins: Position[] = []
+    for (let i = 0; i < landToSeaRatio[0]; i++) {
+      landOrigins.push(getRandomCoordinates(0, 0, this.width - 1, this.height - 1, occupiedCoordinates))
+    }
+    const seaOrigins: Position[] = []
+    for (let i = 0; i < landToSeaRatio[1]; i++) {
+      seaOrigins.push(getRandomCoordinates(0, 0, this.width - 1, this.height - 1, occupiedCoordinates))
+    }
+
+    interface SurfaceItem {
+      isLand: boolean
+      pixels: Set<Pixel>
+    }
+
+    const items: SurfaceItem[] = []
+
+    for (const origin of landOrigins) {
+      const [x, y] = origin
+      const pixels: [Pixel] = [this.pixels[x]![y]!] // pixel certainly exists, based on code above
+      items.push({
+        isLand: true,
+        pixels: new Set(pixels),
+      })
+    }
+
+    for (const origin of seaOrigins) {
+      const [x, y] = origin
+      const pixels: [Pixel] = [this.pixels[x]![y]!] // pixel certainly exists, based on code above
+      items.push({
+        isLand: false,
+        pixels: new Set(pixels),
+      })
+    }
+
+    let extendablePixelsExist = true
+
+    while (extendablePixelsExist) {
+      extendablePixelsExist = false
+
+      for (const item of items) {
+        const extendablePixels = Array.from(item.pixels).filter((p) => p.extendable)
+        if (extendablePixels.length) {
+          extendablePixelsExist = true
+
+          for (const pixel of extendablePixels) {
+            pixel.extendable = false
+
+            for (let x = pixel.x - 1; x <= pixel.x + 1; x++) {
+              for (let y = pixel.y - 1; y <= pixel.y + 1; y++) {
+                if (x === pixel.x && y === pixel.y) {
+                  continue
+                }
+                if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                  continue
+                }
+                const p = this.pixels[x]![y]!
+                if (p.isLand === undefined) {
+                  p.isLand = item.isLand
+                  item.pixels.add(p)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   /** Allocates the world among countries by the most straightforward algorithm. */
-  public allocate() {
+  public allocateCountries() {
+    this.setAllPixelsExtendable()
+
     let extendablePixelsExist = true
 
     while (extendablePixelsExist) {

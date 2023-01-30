@@ -8,6 +8,8 @@ export default class Pixel {
   public y: number
   /** Country having this pixel */
   public country: Country | undefined
+  /** Is land, not sea */
+  public isLand: boolean | undefined
   /** Pixel is likely to have free pixels around */
   public extendable = true
 

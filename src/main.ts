@@ -107,6 +107,11 @@ function main() {
   }
   /* HTML END */
 
+  const surfaceCtx = surfaceCanvas.getContext('2d')
+  if (!(surfaceCtx instanceof CanvasRenderingContext2D)) {
+    throw new Error('Could not retrieve canvas context')
+  }
+
   const countriesCtx = countriesCanvas.getContext('2d')
   if (!(countriesCtx instanceof CanvasRenderingContext2D)) {
     throw new Error('Could not retrieve canvas context')
@@ -135,12 +140,12 @@ function main() {
     const origin = countryOrigins[i]!
     countries.push(new Country(cc.name, cc.color, cc.altColor, origin))
   }
-
   for (const country of countries) {
     world.addCountry(country)
   }
+  world.allocateCountries()
 
-  world.allocate()
+  world.renderSurface(surfaceCtx)
   world.renderCountries(countriesCtx)
   world.renderCapitals(capitalsCtx)
   world.renderNames(namesCtx)
